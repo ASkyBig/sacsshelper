@@ -1,3 +1,7 @@
-# sacssHelper README
+# sacssHelper
 
-在添加类名的时候提示全程
+### 使用
+```
+npm i -D sacss
+```
+![hover](https://user-images.githubusercontent.com/26340566/113652190-e636b200-96c5-11eb-85b9-75a261a69223.gif)
