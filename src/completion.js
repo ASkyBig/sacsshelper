@@ -7,9 +7,7 @@ function statPath(path) {
   } catch (ex) {}
   return false;
 }
-
-function provideHover(document, position) {
-  const word = document.getText(document.getWordRangeAtPosition(position));
+function getCssFile () {
   let cssObjArr = [];
   
   let sacssFilePath = '';
@@ -37,65 +35,42 @@ function provideHover(document, position) {
       let v = item.match(/\{(.*?)\}/)[1];
       return {[key]: v}
     })
+    return cssObjArr;
  
   } catch (err) {
     console.error('err ===', err)
   }
-  if (Object.keys(cssObjArr).includes(word)) {
-    return new vscode.Hover(`
-    \n 简称: ${word}
-    \n 全称: ${cssObjArr[word]}
-    `)
+}
+function provideHover(document, position) {
+  const word = document.getText(document.getWordRangeAtPosition(position));
+  let cssObjArr = getCssFile();
+  if (!cssObjArr.length) return;
+  const item = cssObjArr.find(cssObj => {
+    if (Object.keys(cssObj)[0] === word) {
+      return cssObj;
+    }
+  })
+  if (item) {
+    return new vscode.Hover(`${Object.values(item)[0]}`) 
   }
 }
 
 module.exports = function(context) {
-  let cssObjArr = [];
+  let cssObjArr = getCssFile();
   let triggerCharacters = [];
-  let sacssFilePath = '';
-  const folders = vscode.workspace.workspaceFolders;
-  if (folders) {
-    for (let i = 0; i < folders.length; i++) {
-      const folderPath = folders[i].uri.path;
-      if (__dirname.includes(folderPath)) {
-        sacssFilePath = folderPath;
-      } else {
-        const cssPath = `${folderPath}/node_modules/sacss/index.css`;
-          if (statPath(cssPath)) {
-            sacssFilePath = cssPath;
-            break;
-          }
-      }
-    }
-  }
-  if (!sacssFilePath) return;
-  try {
-    const data = fs.readFileSync(sacssFilePath, 'utf8');
-    const cssArr = data.match(/\..*?{.*}/g);
-    cssObjArr = cssArr.map(item => {
-      let key = item.match(/\.(.*)?{/)[1];
-      let v = item.match(/\{(.*?)\}/)[1];
-      return {[key]: v}
-    })
-    provideHover()
-    const charArr = cssObjArr.map(item => {
-      return Object.keys(item)[0].charAt(0)
-    })
-    triggerCharacters = [...new Set(charArr)];  
-  } catch (err) {
-    console.error('err ===', err)
-  }
+
+  const charArr = cssObjArr.map(item => {
+    return Object.keys(item)[0].charAt(0)
+  })
+  triggerCharacters = [...new Set(charArr)];  
   
   const provide1 = vscode.languages.registerHoverProvider('*', {
-        provideHover
-    })
+      provideHover
+  })
 
-  
-  context.subscriptions.push(
-    vscode.languages.registerCompletionItemProvider(['javascriptreact', 'typescriptreact', 'js', 'javascript', 'ts', 'typescript', 'tsx', 'jsx'], {
+  const provide2 = vscode.languages.registerCompletionItemProvider(['javascriptreact', 'typescriptreact', 'js', 'javascript', 'ts', 'typescript', 'tsx', 'jsx'], {
     
       provideCompletionItems: (document, position, token, context) => {
-        console.log('position', position);
         const line        = document.lineAt(position);
         // 截取当前行起始位置到光标所在位置的字符串
         const lineText = line.text.substring(0, position.character);
@@ -115,6 +90,6 @@ module.exports = function(context) {
       resolveCompletionItem: (item, token) => {
         return null;
       }
-  }, ...triggerCharacters)),
-  provide1
+  }, ...triggerCharacters)
+  context.subscriptions.push(provide1, provide2)
 };
