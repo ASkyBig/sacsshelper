@@ -1,17 +1,26 @@
 const vscode = require('vscode');
 const fs = require('fs');
 
+const window = vscode.window;
+const workspace = vscode.workspace;
+
+const DEFAULT_STYLE = {
+    color: "#2196f3",
+    backgroundColor: "green",
+};
+
 function statPath(path) {
   try {
     return fs.statSync(path);
   } catch (ex) {}
   return false;
 }
+
 function getCssFile () {
   let cssObjArr = [];
   
   let sacssFilePath = '';
-  const folders = vscode.workspace.workspaceFolders;
+  const folders = workspace.workspaceFolders;
   if (folders) {
     for (let i = 0; i < folders.length; i++) {
       const folderPath = folders[i].uri.path;
@@ -41,6 +50,7 @@ function getCssFile () {
     console.error('err ===', err)
   }
 }
+
 function provideHover(document, position) {
   const word = document.getText(document.getWordRangeAtPosition(position));
   let cssObjArr = getCssFile();
@@ -55,9 +65,111 @@ function provideHover(document, position) {
   }
 }
 
+
 module.exports = function(context) {
   let cssObjArr = getCssFile();
   let triggerCharacters = [];
+
+  let timer = null;
+  let activeEditor = window.activeTextEditor;
+  let keywordsPattern, pattern, styleForRegExp, decorationTypes
+
+  let settings = workspace.getConfiguration('sacsshelper');
+
+  initColor(settings);
+
+  context.subscriptions.push(vscode.commands.registerCommand('sacsshelper.togglesacss', function () {
+      settings.update('isEnable', !settings.get('isEnable'), true).then(function () {
+          triggerUpdateDecorations();
+      });
+  }))
+
+  if (activeEditor) {
+    triggerUpdateDecorations();
+  }
+
+  window.onDidChangeActiveTextEditor(function (editor) {
+      activeEditor = editor;
+      if (editor) {
+          triggerUpdateDecorations();
+      }
+  }, null, context.subscriptions);
+
+  workspace.onDidChangeTextDocument(function (event) {
+      if (activeEditor && event.document === activeEditor.document) {
+          triggerUpdateDecorations();
+      }
+  }, null, context.subscriptions);
+
+  workspace.onDidChangeConfiguration(function () {
+      settings = workspace.getConfiguration('sacsshelper');
+      //NOTE: if disabled, do not re-initialize the data or we will not be able to clear the style immediatly via 'toggle' command
+      if (!settings.get('isEnable')) return;
+
+      initColor(settings);
+      triggerUpdateDecorations();
+  }, null, context.subscriptions);
+
+  function initColor (settings) {
+    const customDefaultStyle = settings.get('defaultStyle');
+
+    const keyArr = cssObjArr.map(item => {
+      return Object.keys(item)[0]
+    })
+
+    let re = keyArr.reduce((res, item, index) => {
+      if (index === 0) return res + item;
+      return res + '|' + item;
+    }, '')
+
+    re = `(?<=(class.*))\\b(` + re + `)\\b(?=.*(\\"|\\')`;
+    console.log('re ====', re);
+    keywordsPattern = re;
+    styleForRegExp = Object.assign({}, DEFAULT_STYLE, customDefaultStyle, {
+        overviewRulerLane: vscode.OverviewRulerLane.Right
+    });
+    decorationTypes = {};
+    pattern = keywordsPattern;
+    pattern = new RegExp(pattern, 'g');
+  }
+
+  function updateDecorations () {
+    if (!activeEditor || !activeEditor.document) return;
+    const text = activeEditor.document.getText();
+    let mathes = {}, match;
+  
+    while (match = pattern.exec(text)) {
+        var startPos = activeEditor.document.positionAt(match.index);
+        var endPos = activeEditor.document.positionAt(match.index + match[0].length);
+        var decoration = {
+            range: new vscode.Range(startPos, endPos)
+        };
+
+        var matchedValue = match[0];
+
+        if (mathes[matchedValue]) {
+            mathes[matchedValue].push(decoration);
+        } else {
+            mathes[matchedValue] = [decoration];
+        }
+
+        if (keywordsPattern.trim() && !decorationTypes[matchedValue]) {
+            decorationTypes[matchedValue] = window.createTextEditorDecorationType(styleForRegExp);
+        }
+    }
+
+    Object.keys(decorationTypes).forEach((v) => {
+        var rangeOption = settings.get('isEnable') && mathes[v] ? mathes[v] : [];
+        var decorationType = decorationTypes[v];
+        activeEditor.setDecorations(decorationType, rangeOption);
+    })
+
+  }
+
+  function triggerUpdateDecorations () {
+      timer && clearTimeout(timer);
+      timer = setTimeout(updateDecorations, 0);
+  }
 
   const charArr = cssObjArr.map(item => {
     return Object.keys(item)[0].charAt(0)
@@ -68,14 +180,14 @@ module.exports = function(context) {
       provideHover
   })
 
-  const provide2 = vscode.languages.registerCompletionItemProvider(['javascriptreact', 'typescriptreact', 'js', 'javascript', 'ts', 'typescript', 'tsx', 'jsx'], {
+  const provide2 = vscode.languages.registerCompletionItemProvider(['html', 'javascriptreact', 'typescriptreact', 'js', 'javascript', 'ts', 'typescript', 'tsx', 'jsx'], {
     
       provideCompletionItems: (document, position, token, context) => {
-        const line        = document.lineAt(position);
+        const line = document.lineAt(position);
         // 截取当前行起始位置到光标所在位置的字符串
         const lineText = line.text.substring(0, position.character);
 
-        // 只要当前光标前的字符串包括 `class`或className
+        // 只要当前光标前的字符串包括 class= 或className=
           if(/(class|className)=(\"|\'|\{)/.test(lineText)){
             const res = cssObjArr.map(classItem => {
               const completionItem1 = new vscode.CompletionItem(Object.keys(classItem)[0]);
