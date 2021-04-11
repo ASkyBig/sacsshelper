@@ -1,4 +1,5 @@
 # sacssHelper
+> 区分自定义 class 和 sacss 的类名
 
 ### 使用
 #### 安装依赖
@@ -12,7 +13,7 @@ npm i -D sacss
 #### 命令
 - 搜索命令 Toggle SACSS，可以切换是否高亮
 
-#### 颜色配置
+#### 自定义颜色和背景色
 打开settting.json可以配置高亮颜色及背景色，默认如下：
 ```   
 "sacsshelper.defaultStyle": {

@@ -122,7 +122,7 @@ module.exports = function(context) {
       return res + '|' + item;
     }, '')
 
-    re = `(?<=(class.*))\\b(` + re + '|((m|p)[tblr]\\d+)' + `)\\b`;
+    re = `(?<=class[^'"\`]*(['"\`])[^'"\`]*)(` + '((m|p)[tblr]\\d+)|' + re  + `)(?=.*\\1)`
     console.log('re ====', re);
     keywordsPattern = re;
     styleForRegExp = Object.assign({}, DEFAULT_STYLE, customDefaultStyle, {
