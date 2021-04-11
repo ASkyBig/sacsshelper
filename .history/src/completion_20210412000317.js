@@ -123,7 +123,8 @@ module.exports = function(context) {
       return res + '|' + item;
     }, '')
 
-    re = `(?<=class[^'"\`]*(['"\`])[^'"\`]*)(` + '(\\b(m|p)[tblr]\\d+)|' + re  + `)(?=\\b.*\\1)`;
+    re = `(?<=class[^'"\`]*(['"\`])[^'"\`]*)(` + '((m|p)[tblr]\\d+)|' + re  + `)(?=.*\\1)`;
+    console.log('re ====', re);
     keywordsPattern = re;
     styleForRegExp = Object.assign({}, DEFAULT_STYLE, customDefaultStyle, {
         overviewRulerLane: vscode.OverviewRulerLane.Right
