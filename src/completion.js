@@ -16,7 +16,6 @@ function statPath(path) {
   return false;
 }
 
-console.log('1111');
 function getCssFile () {
   let cssObjArr = [];
   
@@ -53,11 +52,11 @@ function getCssFile () {
 }
 
 function provideHover(document, position) {
-  const word = document.getText(document.getWordRangeAtPosition(position));
+  const word = document.getText(document.getWordRangeAtPosition(position, /[a-zA-Z\d.%]+/));
   let cssObjArr = getCssFile();
   if (!cssObjArr.length) return;
   const item = cssObjArr.find(cssObj => {
-    if (Object.keys(cssObj)[0] === word) {
+    if (Object.keys(cssObj)[0].replace(/(\\)/g, '') === word) {
       return cssObj;
     }
   })
@@ -119,11 +118,12 @@ module.exports = function(context) {
     })
 
     let re = keyArr.reduce((res, item, index) => {
+      item = item.replace(/\\/, '')  
       if (index === 0) return res + item;
       return res + '|' + item;
     }, '')
 
-    re = `(?<=class[^'"\`]*(['"\`])[^'"\`]*)(` + '(\\b(m|p)[tblr]\\d+)|' + re  + `)(?=\\b.*\\1)`;
+    re = `(?<=class[^'"\`]*(['"\`])[^'"\`]*)(` + '\\b)((m|p)[tblr]\\d+|' + re  + `)(?=(\\b|\\s).*\\1)`;
     keywordsPattern = re;
     styleForRegExp = Object.assign({}, DEFAULT_STYLE, customDefaultStyle, {
         overviewRulerLane: vscode.OverviewRulerLane.Right
@@ -193,7 +193,7 @@ module.exports = function(context) {
               const completionItem1 = new vscode.CompletionItem(Object.keys(classItem)[0]);
               completionItem1.kind = vscode.CompletionItemKind.Class;
               completionItem1.detail = ' ' + classItem[Object.keys(classItem)[0]];
-              completionItem1.insertText = Object.keys(classItem)[0];
+              completionItem1.insertText = Object.keys(classItem)[0].includes('\\') ? Object.keys(classItem)[0].replace(/\\/, '') : (Object.keys(classItem)[0].includes('\.') ? Object.keys(classItem)[0].replace(/\./, ''): Object.keys(classItem)[0]);
               return completionItem1;
             })
             return res;
