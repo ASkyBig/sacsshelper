@@ -2,7 +2,7 @@
 	"name": "sacsshelper",
 	"displayName": "",
 	"description": "",
-	"version": "0.1.4",
+	"version": "0.1.6",
 	"publisher": "947821965",
 	"engines": {
 		"vscode": "^1.10.0"

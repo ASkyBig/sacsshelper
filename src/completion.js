@@ -9,6 +9,16 @@ const DEFAULT_STYLE = {
     backgroundColor: "green",
 };
 
+const marginPaddingNumberMap = new Map([
+  [/^\bml\d+\b/, ['margin-left']],
+  [/^\bmt\d+\b/, ['margin-top']],
+  [/^\bmr\d+\b/, ['margin-right']],
+  [/^\bmb\d+\b/, ['margin-bottom']],
+  [/^\bpl\d+\b/, ['padding-left']],
+  [/^\bpt\d+\b/, ['padding-top']],
+  [/^\bpr\d+\b/, ['padding-right']],
+  [/^\bpb\d+\b/, ['padding-bottom']],
+])
 function statPath(path) {
   try {
     return fs.statSync(path);
@@ -53,6 +63,12 @@ function getCssFile () {
 
 function provideHover(document, position) {
   const word = document.getText(document.getWordRangeAtPosition(position, /[a-zA-Z\d.%]+/));
+  if (/\b(m|p)[ltbr]\d+\b/.test(word)) {
+    const numberArray = word.match(/\d+/)
+    const res = [...marginPaddingNumberMap].filter(([key, value]) => key.test(word))
+
+    return new vscode.Hover(`${res[0][1]}: ${numberArray[0]}`) 
+  }
   let cssObjArr = getCssFile();
   if (!cssObjArr.length) return;
   const item = cssObjArr.find(cssObj => {
